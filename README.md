@@ -9,6 +9,7 @@ Smart home technology greatly improves home efficiency. Smart window technology 
 Design a user interface that controls a system of motors based on environmental data from sensors to regulate indoor environments robustly between windows.
 
 The Active Window - Window Primary Control Module will meet or exceed the following system specifications:
+	
 	1. Supports communication with network via WallBus (CAN Bus)
 	2. Supports communication with inter-window motors via WindowBus (CAN Bus)
 	3. Allow the user to set the height at which the window, thermal cover, and blinds are opened/drawn
