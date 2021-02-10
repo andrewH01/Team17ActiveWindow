@@ -210,56 +210,10 @@ void loop() {
               page = 1;
           }
   
-          // SCHEDULE PRESSED
-          if (x > 201 && x < 301) {         //Hard-coded location of slider touch values
-              Serial.println("Schedule pressed!");
-          }
       }
     }
 
     else if ( page == 1 ) {      // If Control mode is Active
-
-//      // Change the red slider value to match the user's input
-//      if(redDesired != redActual){
-//
-//        // Clear previous bottom triangle, -1 and +1 functions are used to solve zebra bug
-//        drawActual(redActual-1, REDBAR_Y, LIGHTCYAN, false);
-//        drawActual(redActual, REDBAR_Y, LIGHTCYAN, false);
-//        drawActual(redActual+1, REDBAR_Y, LIGHTCYAN, false);
-//      
-//        if(redDesired > redActual) { redActual = redActual+1; }
-//        else                       { redActual = redActual-1; }
-//    
-//        drawActual(redActual, REDBAR_Y, RED, true);
-//      }
-//
-//      // Change the green slider value to match the user's input
-//      if(greenDesired != greenActual){
-//
-//        // Clear previous bottom triangle, -1 and +1 functions are used to solve zebra bug
-//        drawActual(greenActual-1, GREENBAR_Y, LIGHTCYAN, false);
-//        drawActual(greenActual, GREENBAR_Y, LIGHTCYAN, false);
-//        drawActual(greenActual+1, GREENBAR_Y, LIGHTCYAN, false);
-//      
-//        if(greenDesired > greenActual) { greenActual = greenActual+1; }
-//        else                           { greenActual = greenActual-1; }
-//    
-//        drawActual(greenActual, GREENBAR_Y, GREEN, true);
-//      }
-//
-//      // Change the blue slider value to match the user's input
-//      if(blueDesired != blueActual){
-//
-//        // Clear previous bottom triangle, -1 and +1 functions are used to solve zebra bug
-//        drawActual(blueActual-1, BLUEBAR_Y, LIGHTCYAN, false);
-//        drawActual(blueActual, BLUEBAR_Y, LIGHTCYAN, false);
-//        drawActual(blueActual+1, BLUEBAR_Y, LIGHTCYAN, false);
-//      
-//        if(blueDesired > blueActual) { blueActual = blueActual+1; }
-//        else                         { blueActual = blueActual-1; }
-//    
-//        drawActual(blueActual, BLUEBAR_Y, BLUE, true);
-//      }
 
       if( x > 16 && x < 45 && y < 216 && y > 199) {
           page = 0;
@@ -386,7 +340,7 @@ void drawButtons(){
     // Create black slider box outlines
     tft.fillRect(6, 190, BUTTON_WIDTH-20, BUTTON_HEIGHT, RED);
     tft.fillRect(BUTTON_WIDTH-6, 190, BUTTON_WIDTH, BUTTON_HEIGHT, GREEN);
-    tft.fillRect(1+(2*BUTTON_WIDTH), 190, BUTTON_WIDTH+10, BUTTON_HEIGHT, BLUE);
+    //tft.fillRect(1+(2*BUTTON_WIDTH), 190, BUTTON_WIDTH+10, BUTTON_HEIGHT, BLUE);
 
     //Write text to buttons
     tft.setTextSize(2);
@@ -395,8 +349,8 @@ void drawButtons(){
     tft.print("Menu");
     tft.setCursor(3+BUTTON_WIDTH, 199);
     tft.print("Control");
-    tft.setCursor(9+(2*BUTTON_WIDTH), 199);
-    tft.print("Schedule");
+    //tft.setCursor(9+(2*BUTTON_WIDTH), 199);
+    //tft.print("Schedule");
 }
 
 
