@@ -27,27 +27,35 @@
 
 #include <Adafruit_GFX.h>       // Core graphics library
 #include <SPI.h>                // Needed for communication w/ board
-#include <Adafruit_ILI9341.h>   // This is one of the chips of the TFT shield
-#include <Adafruit_STMPE610.h>  // This is another chip on the TFT shield
+#include <Adafruit_HX8357.h>   // This is one of the chips of the TFT shield
+#include "TouchScreen.h"
+
+// These are the four touchscreen analog pins
+#define YP A3  // must be an analog pin, use "An" notation!
+#define XM A2  // must be an analog pin, use "An" notation!
+#define YM 5   // can be a digital pin
+#define XP 6   // can be a digital pin
 
 // This is calibration data for the raw touch data to the screen coordinates
-#define TS_MINX 260
-#define TS_MINY 280
-#define TS_MAXX 3770
-#define TS_MAXY 3775
+#define TS_MINX 110
+#define TS_MINY 80
+#define TS_MAXX 900
+#define TS_MAXY 940
 
-// These are the length/width of the display
-#define DISP_MAXX 320
-#define DISP_MAXY 240
+#define MINPRESSURE 10
+#define MAXPRESSURE 1000
 
-// The STMPE610 uses hardware SPI on the shield, and #8
-#define STMPE_CS 8
-Adafruit_STMPE610 ts = Adafruit_STMPE610(STMPE_CS);
+// The display uses hardware SPI, plus #9 & #10
+#define TFT_RST -1  // dont use a reset pin, tie to arduino RST if you like
+#define TFT_DC 4
+#define TFT_CS 7
 
-// The display also uses hardware SPI, plus #9 & #10
-#define TFT_CS 10
-#define TFT_DC 9
-Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
+Adafruit_HX8357 tft = Adafruit_HX8357(TFT_CS, TFT_DC, TFT_RST);
+
+// For better pressure precision, we need to know the resistance
+// between X+ and X- Use any multimeter to read it
+// For the one we're using, its 300 ohms across the X plate
+TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 
 
 // WIP **********************
@@ -109,19 +117,10 @@ void setup() {
   Serial.begin(9600);
   //Serial.println("Serial Monitor Test begin");
 
-  // Set backlight to digital pin 3 and set HIGH
-  pinMode(3, OUTPUT);
-  digitalWrite(3, HIGH);
-
-  // Begin the touch screen
   tft.begin();
-
-  // If there's issue with starting the touch screen, do not proceed further
-  if (!ts.begin()) {
-    while (1);
-  }
+  tft.fillScreen(HX8357_BLACK);
   
-  tft.setRotation(1);
+  tft.setRotation(3);
 
   // Prepare the sliders screen
   drawSliders();
@@ -183,30 +182,27 @@ void loop() {
       drawActual(blueActual, BLUEBAR_Y, BLUE, true);
     }
 
-
+    // Retrieve a point  
+    TSPoint p = ts.getPoint();
     
     // IF THERE IS NO USER INPUT, RE-LOOP
-    if (! ts.touched()) {
-      return;
+    if (p.z < MINPRESSURE || p.z > MAXPRESSURE) {
+     return;
     }
     
-    // Retrieve a point  
-    TS_Point p = ts.getPoint();
-  
     // Scale from ~0->4000 to tft.width using the calibration #'s
-    x = map(p.y, TS_MINY, TS_MAXY,  0, DISP_MAXX-15); //-10 seems good for the 2.8" TFT Touch Shield
-    y = map(p.x, TS_MINX, TS_MAXX, 0, DISP_MAXY); //DISP_MAXX
+    p.x = map(p.x, TS_MINX, TS_MAXX, 0, tft.width());
+    p.y = map(p.y, TS_MAXY, TS_MINY, 0, tft.height());
+
+    x = p.y;
+    y = p.x;
 
     // Debugging in serial monitor to determine touch location vs pixel location
-    Serial.print("P.X: ");
-    Serial.print(p.x);
-    Serial.print(", P.Y: ");
-    Serial.print(p.y);
-    
-    Serial.print("                X: ");
-    Serial.print(x);
-    Serial.print(", Y: ");
+    Serial.print("X: ");
+    Serial.println(x);
+    Serial.print("Y: ");
     Serial.println(y);
+    Serial.println();
     
     if (x > SLIDE_MINX && x < SLIDE_MAXX)
     {
@@ -219,12 +215,12 @@ void loop() {
       } 
       
       // GREEN SLIDER - center at Y=90
-      if (y > 90-(BAR_WIDTHY/2) && y < 90+(BAR_WIDTHY/2)) {         //Hard-coded location of slider touch values
+      if (y > 225-(BAR_WIDTHY/2) && y < 225+(BAR_WIDTHY/2)) {         //Hard-coded location of slider touch values
           updateGreenSlider();
       }
   
       // BLUE SLIDER - center at Y=35
-      if (y > 35-(BAR_WIDTHY/2) && y < 35+(BAR_WIDTHY/2)) {         //Hard-coded location of slider touch values
+      if (y > 305-(BAR_WIDTHY/2) && y < 305+(BAR_WIDTHY/2)) {         //Hard-coded location of slider touch values
           updateBlueSlider();
       }
     }
