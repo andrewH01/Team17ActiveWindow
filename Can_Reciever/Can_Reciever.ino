@@ -29,6 +29,8 @@ void setup() {
 
 void loop() 
 {
+  
+  //CAN BUS
   if (mcp2515.readMessage(&canMsg) == MCP2515::ERROR_OK) // To receive data (Poll Read)
   {
     if(canMsg.can_id==0x036)
@@ -46,7 +48,7 @@ void loop()
     }
    
 }                    
-}
+}//FOR CANBUS
 
 
 void OneStep(bool dir){
