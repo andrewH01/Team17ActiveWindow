@@ -27,27 +27,35 @@
 
 #include <Adafruit_GFX.h>       // Core graphics library
 #include <SPI.h>                // Needed for communication w/ board
-#include <Adafruit_ILI9341.h>   // This is one of the chips of the TFT shield
-#include <Adafruit_STMPE610.h>  // This is another chip on the TFT shield
+#include <Adafruit_HX8357.h>   // This is one of the chips of the TFT shield
+#include "TouchScreen.h"
+
+// These are the four touchscreen analog pins
+#define YP A3  // must be an analog pin, use "An" notation!
+#define XM A2  // must be an analog pin, use "An" notation!
+#define YM 5   // can be a digital pin
+#define XP 6   // can be a digital pin
 
 // This is calibration data for the raw touch data to the screen coordinates
-#define TS_MINX 260
-#define TS_MINY 280
-#define TS_MAXX 3770
-#define TS_MAXY 3775
+#define TS_MINX 110
+#define TS_MINY 80
+#define TS_MAXX 900
+#define TS_MAXY 940
 
-// These are the length/width of the display
-#define DISP_MAXX 320
-#define DISP_MAXY 240
+#define MINPRESSURE 10
+#define MAXPRESSURE 1000
 
-// The STMPE610 uses hardware SPI on the shield, and #8
-#define STMPE_CS 8
-Adafruit_STMPE610 ts = Adafruit_STMPE610(STMPE_CS);
+// The display uses hardware SPI, plus #9 & #10
+#define TFT_RST -1  // dont use a reset pin, tie to arduino RST if you like
+#define TFT_DC 4
+#define TFT_CS 7
 
-// The display also uses hardware SPI, plus #9 & #10
-#define TFT_CS 10
-#define TFT_DC 9
-Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
+Adafruit_HX8357 tft = Adafruit_HX8357(TFT_CS, TFT_DC, TFT_RST);
+
+// For better pressure precision, we need to know the resistance
+// between X+ and X- Use any multimeter to read it
+// For the one we're using, its 300 ohms across the X plate
+TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 
 
 // WIP **********************
@@ -76,17 +84,14 @@ Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
 #define GREENBAR_Y    130              // Top y-value of green slider
 #define BLUEBAR_Y     180              // Top y-value of blue slider
 #define BAR_MINX      50               // X-axis of where slider bars begin
-#define BAR_WIDTHX    20               // Width of slider button X direction
+#define BAR_WIDTHX    25               // Width of slider button X direction
 #define BAR_WIDTHY    25               // Width of slider button Y direction
 #define SLIDE_WIDTHX  250              // Width of full slider bar Y direction
 #define SLIDE_WIDTHY  BAR_WIDTHY+4     // Height of full slider bar X direction
 
-#define SLIDE_MAXX    BAR_MINX+SLIDE_WIDTHX-BAR_WIDTHX-3    // Lowest X position slider can reach
-#define SLIDE_MINX    BAR_MINX+1                            // Highest X position slider can reach
+#define SLIDE_MAXX    BAR_MINX+SLIDE_WIDTHX-BAR_WIDTHX-3    // Highest X position slider can reach
+#define SLIDE_MINX    BAR_MINX+1                            // Lowest X position slider can reach
 #define THRESH        10                                    // Threshold of X value that will snap slider to min/max
-
-// *** WIP variable used for backlight, although may switch to interrupt option
-int blcounter = 0;
 
 // Percent value of each slider
 int redval = 0;
@@ -99,9 +104,9 @@ char greenbuff[60];
 char bluebuff[60];
 
 // Pixel position of each slider
-int redpos = SLIDE_MINX;
-int greenpos = SLIDE_MINX;
-int bluepos = SLIDE_MINX;
+int redDesired = SLIDE_MINX, redActual = SLIDE_MINX;
+int greenDesired = SLIDE_MINX, greenActual = SLIDE_MINX;
+int blueDesired = SLIDE_MINX, blueActual = SLIDE_MINX;
 
 // Scaled x and y coordinate values of touch screen to display
 int x, y;
@@ -112,27 +117,10 @@ void setup() {
   Serial.begin(9600);
   //Serial.println("Serial Monitor Test begin");
 
-  // Set backlight to digital pin 3 and set HIGH
-  pinMode(3, OUTPUT);
-  digitalWrite(3, HIGH);
-
-  // Begin the touch screen
   tft.begin();
-
-  // If there's issue with starting the touch screen, do not proceed further
-  if (!ts.begin()) {
-    while (1);
-  }
+  tft.fillScreen(HX8357_BLACK);
   
-  // Make the screen blank, orient from portait to landscape mode
-  tft.fillScreen(LIGHTCYAN);
-  tft.setRotation(1);
-
-  // Write "Active Window MK1" in upper left corner of screen
-  tft.setTextSize(2);
-  tft.setTextColor(GREY);
-  tft.setCursor(20, 20);  // 20 pixels from the left, 20 pixels from the top
-  tft.print("Active Window MK1");
+  tft.setRotation(3);
 
   // Prepare the sliders screen
   drawSliders();
@@ -151,36 +139,70 @@ void loop() {
   
      For now, this if statement will be left blank
      */
-    if (! ts.touched()) {
-//    blcounter++;
-//    if(blcounter > BACKLIGHT_DELAY) {
-//      digitalWrite(3, LOW);
-//    }
-//    Serial.println("No touch");
-      return;
+    
+    // Change the red slider value to match the user's input
+    if(redDesired != redActual){
+
+      // Clear previous bottom triangle, -1 and +1 functions are used to solve zebra bug
+      drawActual(redActual-1, REDBAR_Y, LIGHTCYAN, false);
+      drawActual(redActual, REDBAR_Y, LIGHTCYAN, false);
+      drawActual(redActual+1, REDBAR_Y, LIGHTCYAN, false);
+      
+      if(redDesired > redActual) { redActual = redActual+1; }
+      else                       { redActual = redActual-1; }
+    
+      drawActual(redActual, REDBAR_Y, RED, true);
     }
-  
-//  if(blcounter >= BACKLIGHT_DELAY){
-//    digitalWrite(3, HIGH);
-//    blcounter = 0;
-//  }
+
+    // Change the green slider value to match the user's input
+    if(greenDesired != greenActual){
+
+      // Clear previous bottom triangle, -1 and +1 functions are used to solve zebra bug
+      drawActual(greenActual-1, GREENBAR_Y, LIGHTCYAN, false);
+      drawActual(greenActual, GREENBAR_Y, LIGHTCYAN, false);
+      drawActual(greenActual+1, GREENBAR_Y, LIGHTCYAN, false);
+      
+      if(greenDesired > greenActual) { greenActual = greenActual+1; }
+      else                           { greenActual = greenActual-1; }
     
+      drawActual(greenActual, GREENBAR_Y, GREEN, true);
+    }
+
+    // Change the blue slider value to match the user's input
+    if(blueDesired != blueActual){
+
+      // Clear previous bottom triangle, -1 and +1 functions are used to solve zebra bug
+      drawActual(blueActual-1, BLUEBAR_Y, LIGHTCYAN, false);
+      drawActual(blueActual, BLUEBAR_Y, LIGHTCYAN, false);
+      drawActual(blueActual+1, BLUEBAR_Y, LIGHTCYAN, false);
+      
+      if(blueDesired > blueActual) { blueActual = blueActual+1; }
+      else                         { blueActual = blueActual-1; }
+    
+      drawActual(blueActual, BLUEBAR_Y, BLUE, true);
+    }
+
     // Retrieve a point  
-    TS_Point p = ts.getPoint();
-  
-    // Scale from ~0->4000 to tft.width using the calibration #'s
-    x = map(p.y, TS_MINY, TS_MAXY,  0, DISP_MAXX); //+30
-    y = map(p.x, TS_MINX, TS_MAXX, 0, DISP_MAXY); //DISP_MAXX
-  
-    Serial.print("P.X: ");
-    Serial.print(p.x);
-    Serial.print(", P.Y: ");
-    Serial.print(p.y);
+    TSPoint p = ts.getPoint();
     
-    Serial.print("                X: ");
-    Serial.print(x);
-    Serial.print(", Y: ");
+    // IF THERE IS NO USER INPUT, RE-LOOP
+    if (p.z < MINPRESSURE || p.z > MAXPRESSURE) {
+     return;
+    }
+    
+    // Scale from ~0->4000 to tft.width using the calibration #'s
+    p.x = map(p.x, TS_MINX, TS_MAXX, 0, tft.width());
+    p.y = map(p.y, TS_MAXY, TS_MINY, 0, tft.height());
+
+    x = p.y;
+    y = p.x;
+
+    // Debugging in serial monitor to determine touch location vs pixel location
+    Serial.print("X: ");
+    Serial.println(x);
+    Serial.print("Y: ");
     Serial.println(y);
+    Serial.println();
     
     if (x > SLIDE_MINX && x < SLIDE_MAXX)
     {
@@ -193,12 +215,12 @@ void loop() {
       } 
       
       // GREEN SLIDER - center at Y=90
-      if (y > 90-(BAR_WIDTHY/2) && y < 90+(BAR_WIDTHY/2)) {         //Hard-coded location of slider touch values
+      if (y > 225-(BAR_WIDTHY/2) && y < 225+(BAR_WIDTHY/2)) {         //Hard-coded location of slider touch values
           updateGreenSlider();
       }
   
       // BLUE SLIDER - center at Y=35
-      if (y > 35-(BAR_WIDTHY/2) && y < 35+(BAR_WIDTHY/2)) {         //Hard-coded location of slider touch values
+      if (y > 305-(BAR_WIDTHY/2) && y < 305+(BAR_WIDTHY/2)) {         //Hard-coded location of slider touch values
           updateBlueSlider();
       }
     }
@@ -208,12 +230,13 @@ void loop() {
 void updateRedSlider() {
   
     // Erase the old bar value and redraw the new one
-    tft.fillRect(redpos, REDBAR_Y+2, BAR_WIDTHX, BAR_WIDTHY, LIGHTCYAN);
-    redpos = x;
-    tft.fillRect(redpos, REDBAR_Y+2, BAR_WIDTHX, BAR_WIDTHY, RED);
+    drawDesired(redDesired, REDBAR_Y, LIGHTCYAN, false);
+    redDesired = x;
+    drawDesired(redDesired, REDBAR_Y, RED, true);
+
   
     // Update the stored value of the slider
-    redval = map(redpos, SLIDE_MINX, SLIDE_MAXX, 0, 100);
+    redval = map(redDesired, SLIDE_MINX, SLIDE_MAXX, 0, 100);
     sprintf(redbuff, "%d%%", redval);
   
     // Write the percentage slider value to the left of the slider bar
@@ -224,15 +247,17 @@ void updateRedSlider() {
     tft.print(redbuff);
 }
 
+
 void updateGreenSlider(){
   
     // Erase the old bar value and redraw the new one
-    tft.fillRect(greenpos, GREENBAR_Y+2, BAR_WIDTHX, BAR_WIDTHY, LIGHTCYAN);
-    greenpos = x;
-    tft.fillRect(greenpos, GREENBAR_Y+2, BAR_WIDTHX, BAR_WIDTHY, GREEN);
+    drawDesired(greenDesired, GREENBAR_Y, LIGHTCYAN, false);
+    greenDesired = x;
+    drawDesired(greenDesired, GREENBAR_Y, GREEN, true);
+    
   
     // Update the stored value of the slider
-    greenval = map(greenpos, SLIDE_MINX, SLIDE_MAXX, 0, 100);
+    greenval = map(greenDesired, SLIDE_MINX, SLIDE_MAXX, 0, 100);
     sprintf(greenbuff, "%d%%", greenval);
   
     // Write the percentage slider value to the left of the slider bar
@@ -243,15 +268,17 @@ void updateGreenSlider(){
     tft.print(greenbuff);
 }
 
+
 void updateBlueSlider() {
   
     // Erase the old bar value and redraw the new one
-    tft.fillRect(bluepos, BLUEBAR_Y+2, BAR_WIDTHX, BAR_WIDTHY, LIGHTCYAN);
-    bluepos = x;
-    tft.fillRect(bluepos, BLUEBAR_Y+2, BAR_WIDTHX, BAR_WIDTHY, BLUE);
+    drawDesired(blueDesired, BLUEBAR_Y, LIGHTCYAN, false);
+    blueDesired = x;
+    drawDesired(blueDesired, BLUEBAR_Y, BLUE, true);
+
   
     // Update the stored value of the slider
-    blueval = map(bluepos, SLIDE_MINX, SLIDE_MAXX, 0, 100);
+    blueval = map(blueDesired, SLIDE_MINX, SLIDE_MAXX, 0, 100);
     sprintf(bluebuff, "%d%%", blueval);
   
     // Write the percentage slider value to the left of the slider bar
@@ -269,15 +296,32 @@ void updateBlueSlider() {
  */
 void drawSliders() {
 
+    // Make the screen blank, orient from portait to landscape mode
+    tft.fillScreen(LIGHTCYAN);
+
+    // Write "Active Window MK1" in upper left corner of screen
+    tft.setTextSize(2);
+    tft.setTextColor(GREY);
+    tft.setCursor(90, 28);  // 20 pixels from the left, 20 pixels from the top
+    tft.print("Active Window MK3");
+
+    // Draw back arrow
+    tft.fillRoundRect(20,20,40,30,8,RED);
+    tft.fillTriangle(28,35,36,25,36,45,WHITE);
+    tft.fillRect(36,30,12,10,WHITE);
+
     // Create black slider box outlines
     tft.drawRect(SLIDE_MINX-2, REDBAR_Y, SLIDE_WIDTHX, SLIDE_WIDTHY, GREY);
     tft.drawRect(SLIDE_MINX-2, GREENBAR_Y, SLIDE_WIDTHX, SLIDE_WIDTHY, GREY);
     tft.drawRect(SLIDE_MINX-2, BLUEBAR_Y, SLIDE_WIDTHX, SLIDE_WIDTHY, GREY);
 
     // Draw initial slider buttons
-    tft.fillRect(SLIDE_MINX, REDBAR_Y + 2, BAR_WIDTHX, BAR_WIDTHY, RED);
-    tft.fillRect(SLIDE_MINX, GREENBAR_Y + 2, BAR_WIDTHX, BAR_WIDTHY, GREEN);
-    tft.fillRect(SLIDE_MINX, BLUEBAR_Y + 2, BAR_WIDTHX, BAR_WIDTHY, BLUE);
+    drawDesired(redDesired, REDBAR_Y, RED, true);
+    drawDesired(greenDesired, GREENBAR_Y, GREEN, true);
+    drawDesired(blueDesired, BLUEBAR_Y, BLUE, true);
+    drawActual(redActual, REDBAR_Y, RED, true);
+    drawActual(greenActual, GREENBAR_Y, GREEN, true);
+    drawActual(blueActual, BLUEBAR_Y, BLUE, true);
 
     // Write initial percentages of each slider
     tft.setTextSize(1);
@@ -288,4 +332,52 @@ void drawSliders() {
     tft.print("0%");
     tft.setCursor(20, 182);
     tft.print("0%");
+}
+
+
+void drawDesired(int barPos_X, int barPos_Y, uint16_t color, boolean outline){
+  
+  int16_t x0, x1, x2, y0, y1, y2;
+
+  // Coordinates for user selected location
+  x0 = barPos_X;
+  y0 = barPos_Y+BAR_WIDTHY;
+  x1 = x0;
+  y2 = barPos_Y+(2*BAR_WIDTHY/5);
+  y1 = y2 + (BAR_WIDTHY/2)-7;
+  y0 = y0 - BAR_WIDTHY+2;
+  x2 = x0+(BAR_WIDTHX/2);
+  y2 = y0;
+  tft.fillTriangle(x0, y0, x1, y1, x2, y2, color);
+
+  if(outline){
+    tft.drawTriangle(x0, y0, x1, y1, x2, y2, BLACK);
+  }
+
+  x1 = x1 + BAR_WIDTHX-1;
+  x0 = x1;
+  tft.fillTriangle(x0, y0, x1, y1, x2, y2, color);
+
+  if(outline){
+    tft.drawTriangle(x0, y0, x1, y1, x2, y2, BLACK);
+  }
+}
+
+
+void drawActual(int barPos_X, int barPos_Y, uint16_t color, boolean outline){
+
+  int16_t x0, x1, x2, y0, y1, y2;
+  
+  // Coordinates for bottom triangle
+  x0 = barPos_X;
+  y0 = barPos_Y+BAR_WIDTHY;
+  x1 = x0+BAR_WIDTHX-1;
+  y1 = barPos_Y+BAR_WIDTHY;
+  x2 = x0+(BAR_WIDTHX/2);
+  y2 = barPos_Y+(2*BAR_WIDTHY/5);
+  tft.fillTriangle(x0, y0, x1, y1, x2, y2, color);
+
+  if(outline){
+    tft.drawTriangle(x0, y0, x1, y1, x2, y2, BLACK);
+  }
 }
