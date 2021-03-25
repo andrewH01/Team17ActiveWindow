@@ -77,36 +77,26 @@ TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 
 // Colors used for testing, will be removed in later versions
 #define RED     0xF800
-#define GREEN   0x07E0
-#define BLUE    0x001F
 
-#define REDBAR_Y      80               // Top y-value of red slider
-#define GREENBAR_Y    130              // Top y-value of green slider
-#define BLUEBAR_Y     180              // Top y-value of blue slider
-#define BAR_MINX      50               // X-axis of where slider bars begin
-#define BAR_WIDTHX    25               // Width of slider button X direction
-#define BAR_WIDTHY    25               // Width of slider button Y direction
-#define SLIDE_WIDTHX  250              // Width of full slider bar Y direction
+#define BAR_Y         130               // Top y-value of slider
+#define BAR_MINX      40               // X-axis of where slider bar begin
+#define BAR_WIDTHX    40               // Width of slider button X direction
+#define BAR_WIDTHY    40               // Width of slider button Y direction
+#define SLIDE_WIDTHX  400              // Width of full slider bar Y direction
 #define SLIDE_WIDTHY  BAR_WIDTHY+4     // Height of full slider bar X direction
 
 #define SLIDE_MAXX    BAR_MINX+SLIDE_WIDTHX-BAR_WIDTHX-3    // Highest X position slider can reach
 #define SLIDE_MINX    BAR_MINX+1                            // Lowest X position slider can reach
 #define THRESH        10                                    // Threshold of X value that will snap slider to min/max
 
-// Percent value of each slider
-int redval = 0;
-int greenval = 0;
-int blueval = 0;
+// Percent value of slider
+int val = 0;
 
 // Character buffers used to print slider percentages
-char redbuff[60];
-char greenbuff[60];
-char bluebuff[60];
+char percent_buff[60];
 
 // Pixel position of each slider
-int redDesired = SLIDE_MINX, redActual = SLIDE_MINX;
-int greenDesired = SLIDE_MINX, greenActual = SLIDE_MINX;
-int blueDesired = SLIDE_MINX, blueActual = SLIDE_MINX;
+int desired = SLIDE_MINX, actual = SLIDE_MINX;
 
 // Scaled x and y coordinate values of touch screen to display
 int x, y;
@@ -123,7 +113,7 @@ void setup() {
   tft.setRotation(3);
 
   // Prepare the sliders screen
-  drawSliders();
+  drawSlider();
 }
 
 void loop() {
@@ -141,45 +131,17 @@ void loop() {
      */
     
     // Change the red slider value to match the user's input
-    if(redDesired != redActual){
+    if(desired != actual){
 
       // Clear previous bottom triangle, -1 and +1 functions are used to solve zebra bug
-      drawActual(redActual-1, REDBAR_Y, LIGHTCYAN, false);
-      drawActual(redActual, REDBAR_Y, LIGHTCYAN, false);
-      drawActual(redActual+1, REDBAR_Y, LIGHTCYAN, false);
+      drawActual(actual-1, BAR_Y, LIGHTCYAN, false);
+      drawActual(actual, BAR_Y, LIGHTCYAN, false);
+      drawActual(actual+1, BAR_Y, LIGHTCYAN, false);
       
-      if(redDesired > redActual) { redActual = redActual+1; }
-      else                       { redActual = redActual-1; }
+      if(desired > actual) { actual = actual+1; }
+      else                 { actual = actual-1; }
     
-      drawActual(redActual, REDBAR_Y, RED, true);
-    }
-
-    // Change the green slider value to match the user's input
-    if(greenDesired != greenActual){
-
-      // Clear previous bottom triangle, -1 and +1 functions are used to solve zebra bug
-      drawActual(greenActual-1, GREENBAR_Y, LIGHTCYAN, false);
-      drawActual(greenActual, GREENBAR_Y, LIGHTCYAN, false);
-      drawActual(greenActual+1, GREENBAR_Y, LIGHTCYAN, false);
-      
-      if(greenDesired > greenActual) { greenActual = greenActual+1; }
-      else                           { greenActual = greenActual-1; }
-    
-      drawActual(greenActual, GREENBAR_Y, GREEN, true);
-    }
-
-    // Change the blue slider value to match the user's input
-    if(blueDesired != blueActual){
-
-      // Clear previous bottom triangle, -1 and +1 functions are used to solve zebra bug
-      drawActual(blueActual-1, BLUEBAR_Y, LIGHTCYAN, false);
-      drawActual(blueActual, BLUEBAR_Y, LIGHTCYAN, false);
-      drawActual(blueActual+1, BLUEBAR_Y, LIGHTCYAN, false);
-      
-      if(blueDesired > blueActual) { blueActual = blueActual+1; }
-      else                         { blueActual = blueActual-1; }
-    
-      drawActual(blueActual, BLUEBAR_Y, BLUE, true);
+      drawActual(actual, BAR_Y, RED, true);
     }
 
     // Retrieve a point  
@@ -192,7 +154,7 @@ void loop() {
     
     // Scale from ~0->4000 to tft.width using the calibration #'s
     p.x = map(p.x, TS_MINX, TS_MAXX, 0, tft.width());
-    p.y = map(p.y, TS_MAXY, TS_MINY, 0, tft.height());
+    p.y = map(p.y, TS_MAXY, TS_MINY, -15, tft.height()+120);
 
     x = p.y;
     y = p.x;
@@ -209,92 +171,38 @@ void loop() {
       if(x < SLIDE_MINX + THRESH){ x = SLIDE_MINX; }    // Snap to minimum if within threshold
       if(x > SLIDE_MAXX - THRESH){ x = SLIDE_MAXX; }    // Snap to maximum if within threshold
       
-      //RED SLIDER - center at Y=150
-      if (y > 150-(BAR_WIDTHY/2) && y < 150+(BAR_WIDTHY/2)) {       //Hard-coded location of slider touch values
-          updateRedSlider();
-      } 
-      
-      // GREEN SLIDER - center at Y=90
-      if (y > 225-(BAR_WIDTHY/2) && y < 225+(BAR_WIDTHY/2)) {         //Hard-coded location of slider touch values
-          updateGreenSlider();
-      }
-  
-      // BLUE SLIDER - center at Y=35
-      if (y > 305-(BAR_WIDTHY/2) && y < 305+(BAR_WIDTHY/2)) {         //Hard-coded location of slider touch values
-          updateBlueSlider();
+      //SLIDER - center at Y=150
+      if (y > 220-(BAR_WIDTHY/2) && y < 260+(BAR_WIDTHY/2)) {       //HARD-CODED location of slider touch values
+          updateSlider();
       }
     }
 }
 
 
-void updateRedSlider() {
+void updateSlider() {
   
     // Erase the old bar value and redraw the new one
-    drawDesired(redDesired, REDBAR_Y, LIGHTCYAN, false);
-    redDesired = x;
-    drawDesired(redDesired, REDBAR_Y, RED, true);
+    drawDesired(desired, BAR_Y, LIGHTCYAN, false);
+    desired = x;
+    drawDesired(desired, BAR_Y, RED, true);
 
-  
     // Update the stored value of the slider
-    redval = map(redDesired, SLIDE_MINX, SLIDE_MAXX, 0, 100);
-    sprintf(redbuff, "%d%%", redval);
+    val = map(desired, SLIDE_MINX, SLIDE_MAXX, 0, 100);
+    sprintf(percent_buff, "%d%%", val);
   
     // Write the percentage slider value to the left of the slider bar
-    tft.fillRect(20, 86, 23, 15, LIGHTCYAN);
-    tft.setTextSize(1);
+    tft.fillRect(220, 190, 150, 50, LIGHTCYAN);
+    tft.setTextSize(4);
     tft.setTextColor(GREY);
-    tft.setCursor(20, 86);
-    tft.print(redbuff);
+    tft.setCursor(220, 190);
+    tft.print(percent_buff);
 }
-
-
-void updateGreenSlider(){
-  
-    // Erase the old bar value and redraw the new one
-    drawDesired(greenDesired, GREENBAR_Y, LIGHTCYAN, false);
-    greenDesired = x;
-    drawDesired(greenDesired, GREENBAR_Y, GREEN, true);
-    
-  
-    // Update the stored value of the slider
-    greenval = map(greenDesired, SLIDE_MINX, SLIDE_MAXX, 0, 100);
-    sprintf(greenbuff, "%d%%", greenval);
-  
-    // Write the percentage slider value to the left of the slider bar
-    tft.fillRect(20, 134, 23, 15, LIGHTCYAN);
-    tft.setTextSize(1);
-    tft.setTextColor(GREY);
-    tft.setCursor(20, 134);
-    tft.print(greenbuff);
-}
-
-
-void updateBlueSlider() {
-  
-    // Erase the old bar value and redraw the new one
-    drawDesired(blueDesired, BLUEBAR_Y, LIGHTCYAN, false);
-    blueDesired = x;
-    drawDesired(blueDesired, BLUEBAR_Y, BLUE, true);
-
-  
-    // Update the stored value of the slider
-    blueval = map(blueDesired, SLIDE_MINX, SLIDE_MAXX, 0, 100);
-    sprintf(bluebuff, "%d%%", blueval);
-  
-    // Write the percentage slider value to the left of the slider bar
-    tft.fillRect(20, 182, 23, 15, LIGHTCYAN);
-    tft.setTextSize(1);
-    tft.setTextColor(GREY);
-    tft.setCursor(20, 182);
-    tft.print(bluebuff);
-}
-
 
 /*  -- Do not touch -- 
- *  Draws sliders on the screen based on position {COLOR}BAR_Y with length SLIDE_WIDTHX at SLIDE_MINX-2
- *  Draw the initial slider buttons at their lowest position. 
+ *  Draws slider on the screen based on position BAR_Y with length SLIDE_WIDTHX at SLIDE_MINX-2
+ *  Draw the initial slider button at their lowest position.
  */
-void drawSliders() {
+void drawSlider() {
 
     // Make the screen blank, orient from portait to landscape mode
     tft.fillScreen(LIGHTCYAN);
@@ -310,30 +218,19 @@ void drawSliders() {
     tft.fillTriangle(28,35,36,25,36,45,WHITE);
     tft.fillRect(36,30,12,10,WHITE);
 
-    // Create black slider box outlines
-    tft.drawRect(SLIDE_MINX-2, REDBAR_Y, SLIDE_WIDTHX, SLIDE_WIDTHY, GREY);
-    tft.drawRect(SLIDE_MINX-2, GREENBAR_Y, SLIDE_WIDTHX, SLIDE_WIDTHY, GREY);
-    tft.drawRect(SLIDE_MINX-2, BLUEBAR_Y, SLIDE_WIDTHX, SLIDE_WIDTHY, GREY);
+    // Create black slider box outline
+    tft.drawRect(SLIDE_MINX-2, BAR_Y, SLIDE_WIDTHX, SLIDE_WIDTHY, GREY);
 
-    // Draw initial slider buttons
-    drawDesired(redDesired, REDBAR_Y, RED, true);
-    drawDesired(greenDesired, GREENBAR_Y, GREEN, true);
-    drawDesired(blueDesired, BLUEBAR_Y, BLUE, true);
-    drawActual(redActual, REDBAR_Y, RED, true);
-    drawActual(greenActual, GREENBAR_Y, GREEN, true);
-    drawActual(blueActual, BLUEBAR_Y, BLUE, true);
+    // Draw initial slider button
+    drawDesired(desired, BAR_Y, RED, true);
+    drawActual(actual, BAR_Y, RED, true);
 
     // Write initial percentages of each slider
-    tft.setTextSize(1);
+    tft.setTextSize(4);
     tft.setTextColor(GREY);
-    tft.setCursor(20, 86);
-    tft.print("0%");
-    tft.setCursor(20, 134);
-    tft.print("0%");
-    tft.setCursor(20, 182);
+    tft.setCursor(220, 190);
     tft.print("0%");
 }
-
 
 void drawDesired(int barPos_X, int barPos_Y, uint16_t color, boolean outline){
   
@@ -362,7 +259,6 @@ void drawDesired(int barPos_X, int barPos_Y, uint16_t color, boolean outline){
     tft.drawTriangle(x0, y0, x1, y1, x2, y2, BLACK);
   }
 }
-
 
 void drawActual(int barPos_X, int barPos_Y, uint16_t color, boolean outline){
 
