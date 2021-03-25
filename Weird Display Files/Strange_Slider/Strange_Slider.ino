@@ -57,21 +57,10 @@ Adafruit_HX8357 tft = Adafruit_HX8357(TFT_CS, TFT_DC, TFT_RST);
 // For the one we're using, its 300 ohms across the X plate
 TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 
-
-// WIP **********************
-// Amount of time before backlight shut offs when inactive
-// When testing values for backlight delay
-// 10000 - too quick
-// 20000 - too quick
-// 30000 - still too quick
-// 40000 - doesn't go to sleep, will keep value here until fixable
-#define BACKLIGHT_DELAY 40000
-
-
 // Define some TFT readable colour codes to human readable names
 #define BLACK       0x0000
-#define GREY        tft.color565(64, 64, 64)
-#define SILVER      tft.color565(137, 140, 145)
+#define DARKGRAY    tft.color565(51, 51, 51)
+#define GRAY        tft.color565(128, 140, 145)
 #define LIGHTCYAN   tft.color565(233, 237, 247) 
 #define WHITE       0xFFFF
 
@@ -108,8 +97,6 @@ void setup() {
   //Serial.println("Serial Monitor Test begin");
 
   tft.begin();
-  tft.fillScreen(HX8357_BLACK);
-  
   tft.setRotation(3);
 
   // Prepare the sliders screen
@@ -134,9 +121,9 @@ void loop() {
     if(desired != actual){
 
       // Clear previous bottom triangle, -1 and +1 functions are used to solve zebra bug
-      drawActual(actual-1, BAR_Y, LIGHTCYAN, false);
-      drawActual(actual, BAR_Y, LIGHTCYAN, false);
-      drawActual(actual+1, BAR_Y, LIGHTCYAN, false);
+      drawActual(actual-1, BAR_Y, DARKGRAY, false);
+      drawActual(actual, BAR_Y, DARKGRAY, false);
+      drawActual(actual+1, BAR_Y, DARKGRAY, false);
       
       if(desired > actual) { actual = actual+1; }
       else                 { actual = actual-1; }
@@ -182,7 +169,7 @@ void loop() {
 void updateSlider() {
   
     // Erase the old bar value and redraw the new one
-    drawDesired(desired, BAR_Y, LIGHTCYAN, false);
+    drawDesired(desired, BAR_Y, DARKGRAY, false);
     desired = x;
     drawDesired(desired, BAR_Y, RED, true);
 
@@ -191,9 +178,9 @@ void updateSlider() {
     sprintf(percent_buff, "%d%%", val);
   
     // Write the percentage slider value to the left of the slider bar
-    tft.fillRect(220, 190, 150, 50, LIGHTCYAN);
+    tft.fillRect(220, 190, 150, 50, DARKGRAY);
     tft.setTextSize(4);
-    tft.setTextColor(GREY);
+    tft.setTextColor(WHITE);
     tft.setCursor(220, 190);
     tft.print(percent_buff);
 }
@@ -205,21 +192,22 @@ void updateSlider() {
 void drawSlider() {
 
     // Make the screen blank, orient from portait to landscape mode
-    tft.fillScreen(LIGHTCYAN);
+    tft.fillScreen(DARKGRAY);
 
     // Write "Active Window MK1" in upper left corner of screen
     tft.setTextSize(2);
-    tft.setTextColor(GREY);
+    tft.setTextColor(WHITE);
     tft.setCursor(90, 28);  // 20 pixels from the left, 20 pixels from the top
     tft.print("Active Window MK3");
 
     // Draw back arrow
-    tft.fillRoundRect(20,20,40,30,8,RED);
+    tft.fillRoundRect(20,20,40,30,8,GRAY);
     tft.fillTriangle(28,35,36,25,36,45,WHITE);
     tft.fillRect(36,30,12,10,WHITE);
 
     // Create black slider box outline
-    tft.drawRect(SLIDE_MINX-2, BAR_Y, SLIDE_WIDTHX, SLIDE_WIDTHY, GREY);
+    tft.drawRect(SLIDE_MINX-2, BAR_Y, SLIDE_WIDTHX, SLIDE_WIDTHY, GRAY);
+    tft.drawRect(SLIDE_MINX-3, BAR_Y-1, SLIDE_WIDTHX+2, SLIDE_WIDTHY+2, GRAY);
 
     // Draw initial slider button
     drawDesired(desired, BAR_Y, RED, true);
@@ -227,7 +215,7 @@ void drawSlider() {
 
     // Write initial percentages of each slider
     tft.setTextSize(4);
-    tft.setTextColor(GREY);
+    tft.setTextColor(WHITE);
     tft.setCursor(220, 190);
     tft.print("0%");
 }
