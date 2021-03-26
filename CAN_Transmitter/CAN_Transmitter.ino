@@ -27,9 +27,10 @@ void loop()
 {
   potValue = analogRead(potPin);
   potValue = map(potValue,0,1023,0,255);
-  Serial.println(potValue);
+  //Serial.println(potValue);
     
-  canMsg.data[0] = potValue;        //Update pot value in [0]
+  canMsg.data[0] = 180;        //Update pot value in [0]
+  Serial.println(canMsg.data[0]);
   //canMsg.data[1]= 0x00;
   mcp2515.sendMessage(&canMsg);     //Sends the CAN message
   Serial.println(mcp2515.readMessage(&canMsg));

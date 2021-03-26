@@ -31,8 +31,11 @@ void loop()
 {
   
   //CAN BUS
+  
   if (mcp2515.readMessage(&canMsg) == MCP2515::ERROR_OK) // To receive data (Poll Read)
   {
+    
+    Serial.println("Made it in!");
     if(canMsg.can_id==0x036)
     {
      int x = canMsg.data[0];         
