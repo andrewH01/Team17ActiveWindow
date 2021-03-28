@@ -71,13 +71,8 @@ char weather[20] = "Partly Cloudy";   // Weather text to display on screen (clou
 int x, y;
 
 void setup() {
-  
-    //Necessary code to start up the touch screen
+  //Necessary code to start up the touch screen
     Serial.begin(9600);
-  
-    // Set backlight to digital pin 3 and set HIGH
-    pinMode(3, OUTPUT);
-    digitalWrite(3, HIGH);
   
     // Begin the touch screen
     tft.begin();
@@ -85,6 +80,7 @@ void setup() {
   
     // Prepare the sliders screen
     drawMenu();
+    
 }
 
 void loop() {

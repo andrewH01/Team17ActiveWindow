@@ -50,6 +50,7 @@ TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
  */
 int next_page = 0;
 int prev_page = next_page;
+
 //====================================================
 //====================DECLARES========================
 //====================================================
@@ -95,10 +96,10 @@ MCP2515 chipE(8);
 //====================================================
 void setup() {
   tft.begin();
-    tft.setRotation(3);
+  tft.setRotation(3);
   
-    // Prepare the sliders screen
-    drawHome();
+  // Prepare the home screen
+  drawHome();
 
     
   canMsg1.can_id  = address;

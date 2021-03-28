@@ -205,7 +205,7 @@ void drawSlider() {
     tft.fillTriangle(28,35,36,25,36,45,WHITE);
     tft.fillRect(36,30,12,10,WHITE);
 
-    // Create black slider box outline
+    // Create blac slider box outline
     tft.drawRect(SLIDE_MINX-2, BAR_Y, SLIDE_WIDTHX, SLIDE_WIDTHY, GRAY);
     tft.drawRect(SLIDE_MINX-3, BAR_Y-1, SLIDE_WIDTHX+2, SLIDE_WIDTHY+2, GRAY);
 

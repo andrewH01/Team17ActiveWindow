@@ -94,10 +94,10 @@ MCP2515 chipE(8);
 //====================================================
 void setup() {
   tft.begin();
-    tft.setRotation(3);
+  tft.setRotation(3);
   
-    // Prepare the sliders screen
-    drawHome();
+  // Prepare the sliders screen
+  drawHome();
   
   while (!Serial);
   Serial.begin(9600);
@@ -383,6 +383,10 @@ void ReceiveMessageC(MCP2515 Device, struct can_frame Msg,int address){
   }
   }
   
+//
+// HOME FUNCTIONS
+//
+
 #define BUTTON_WIDTH 175     // Y height of button
 #define BUTTON_HEIGHT 60     // X height of button
 
@@ -397,14 +401,17 @@ void loopHome(int x, int y){
       // SCHEDULE PRESSED
       if (x > 18 && x < 178) {       //Hard-coded location of slider touch values
           next_page = 1;
-          Serial.println("Schedule pressed!");
       } 
       
       // MANUAL PRESSED
       if (x > 268 && x < 425) {         //Hard-coded location of slider touch values
           next_page = 2;
-          Serial.println("Manual pressed!");
       }
+    }
+    
+    //SETTINGS PRESSED
+    else if (x > 368 && y > 42 && x < 425 && y < 144){
+        next_page = 3;
     }
 }
 
@@ -424,13 +431,13 @@ void drawTemperature(){
       // Write temperature to middle of screen
       tft.setTextSize(7);
       tft.setTextColor(WHITE);
-      tft.setCursor(105, 70);
+      tft.setCursor(185, 110);
       sprintf(tempbuff, "%d F", temperature);
       tft.print(tempbuff);
 
       // Print degree symbol
       tft.setTextSize(2);
-      tft.setCursor(150, 65);
+      tft.setCursor(230, 105);
       tft.print("o");
     }
 
@@ -439,14 +446,14 @@ void drawTemperature(){
       
       // Write temperature to middle of screen
       tft.setTextSize(7);
-      tft.setTextColor(GRAY);
-      tft.setCursor(80, 70);
+      tft.setTextColor(WHITE);
+      tft.setCursor(160, 110);
       sprintf(tempbuff, "%d F", temperature);
       tft.print(tempbuff);
 
       // Print degree symbol
       tft.setTextSize(2);
-      tft.setCursor(165, 65);
+      tft.setCursor(245, 105);
       tft.print("o");
     }
 
@@ -456,13 +463,13 @@ void drawTemperature(){
       // Write temperature to middle of screen
       tft.setTextSize(7);
       tft.setTextColor(WHITE);
-      tft.setCursor(60, 70);
+      tft.setCursor(140, 110);
       sprintf(tempbuff, "%d F", temperature);
       tft.print(tempbuff);
 
       // Print degree symbol
       tft.setTextSize(2);
-      tft.setCursor(185, 65);
+      tft.setCursor(265, 105);
       tft.print("o");
     }
 }
@@ -472,7 +479,7 @@ void drawWeather(){
     // Write temperature to middle of screen
     tft.setTextSize(2);
     tft.setTextColor(WHITE);
-    tft.setCursor(80, 135);  // Will need to adjust X value based on number of letters
+    tft.setCursor(163, 185);  // Will need to adjust X value based on number of letters
     tft.print(weather);
 }
 
@@ -488,6 +495,16 @@ void drawButtons(){
     tft.print("Schedule");
     tft.setCursor((2*BUTTON_WIDTH)-30, 260);
     tft.print("Manual");
+
+    // Draw settings gear
+    tft.fillCircle(428,50,26,GRAY);
+    tft.fillCircle(428,50,10,DARKGRAY);
+    tft.fillCircle(428,78,8,GRAY);       // Same X, Y+r
+    tft.fillCircle(452,64,8,GRAY);       // X+rootX, Y+rootY
+    tft.fillCircle(452,36,8,GRAY);       // X+rootX, Y-rootY
+    tft.fillCircle(428,22,8,GRAY);       // Same X, Y-r
+    tft.fillCircle(404,36,8,GRAY);       // X-rootX, Y-rootY
+    tft.fillCircle(404,64,8,GRAY);       // X-rootX, Y+rootY
 }
 
 void drawControl(){
@@ -506,12 +523,36 @@ void drawControl(){
 //
 
 void loopSchedule(int x, int y){
+    if(x > 13 && x < 127 && y > 45 && y < 98){
+      next_page = 0;
+    }
 
+    if(x > 188 && x < 355 && y > 288 && y < 355){
+      scheduleButton();
+    }
 }
+
 void drawSchedule(){
+    tft.fillScreen(DARKGRAY);
+
+    // Draw Home button
+    tft.fillRoundRect(15,15,130,50,12,GRAY);
+    tft.setTextSize(3);
+    tft.setTextColor(BLACK);
+    tft.setCursor(45, 30);
+    tft.print("Home");
+
+    // Draw Home button
+    tft.fillRoundRect(200,180,180,50,12,GRAY);
+    tft.setTextSize(3);
+    tft.setTextColor(BLACK);
+    tft.setCursor(230, 195);
+    tft.print("Button");
+}
+
+void scheduleButton(){
   
 }
-
 
 //
 // MANUAL MODE FUNCTIONS
@@ -550,7 +591,7 @@ void loopManual(int x, int y){
         }
     }
 
-    if(x > 20 && x < 60 && y > 20 && y < 50){
+    if(x > 13 && x < 127 && y > 45 && y < 98){
       next_page = 0;
     }
 }
@@ -595,18 +636,14 @@ void drawManual() {
     // Make the screen blank, orient from portait to landscape mode
     tft.fillScreen(DARKGRAY);
 
-    // Write "Active Window MK1" in upper left corner of screen
-    tft.setTextSize(2);
-    tft.setTextColor(WHITE);
-    tft.setCursor(90, 28);  // 20 pixels from the left, 20 pixels from the top
-    tft.print("Active Window MK3");
+    // Draw Home button
+    tft.fillRoundRect(15,15,130,50,12,GRAY);
+    tft.setTextSize(3);
+    tft.setTextColor(BLACK);
+    tft.setCursor(45, 30);
+    tft.print("Home");
 
-    // Draw back arrow
-    tft.fillRoundRect(20,20,40,30,8,GRAY);
-    tft.fillTriangle(28,35,36,25,36,45,WHITE);
-    tft.fillRect(36,30,12,10,WHITE);
-
-    // Create blac slider box outline
+    // Create black slider box outline
     tft.drawRect(SLIDE_MINX-2, BAR_Y, SLIDE_WIDTHX, SLIDE_WIDTHY, GRAY);
     tft.drawRect(SLIDE_MINX-3, BAR_Y-1, SLIDE_WIDTHX+2, SLIDE_WIDTHY+2, GRAY);
 
@@ -677,7 +714,82 @@ void drawActual(int barPos_X, int barPos_Y, uint16_t color, boolean outline){
 // SETTINGS FUNCTIONS
 //
 
-void loopSettings(int x, int y){}
-void drawSettings(){}
+void loopSettings(int x, int y){
+    if(x > 13 && x < 127 && y > 45 && y < 98){
+      next_page = 0;
+    }
 
- 
+    if(x > 220 && x < 420 && y > 365 && y < 430){
+      recalibrate();
+    }
+}
+
+void drawSettings(){
+    tft.fillScreen(DARKGRAY);
+
+    // Draw Home button
+    tft.fillRoundRect(15,15,130,50,12,GRAY);
+    tft.setTextSize(3);
+    tft.setTextColor(BLACK);
+    tft.setCursor(45, 30);
+    tft.print("Home");
+
+    // Draw Lock button
+    tft.fillRoundRect(235,55,220,60,12,GRAY);
+    tft.setTextSize(3);
+    tft.setTextColor(BLACK);
+    tft.setCursor(248, 75);
+    tft.print("Lock");
+    drawUnlocked();                           // Need to add an if statement here to draw switch based on a boolean variable
+
+    // Draw Units button
+    tft.fillRoundRect(235,140,220,60,12,GRAY);
+    tft.setTextSize(3);
+    tft.setTextColor(BLACK);
+    tft.setCursor(248, 160);
+    tft.print("Units");
+    drawMetric();                             // Need to add an if statement here to draw switch based on a boolean variable
+    
+    // Draw Recalibrate button
+    tft.fillRoundRect(235,225,220,60,12,GRAY);
+    tft.setTextSize(3);
+    tft.setTextColor(BLACK);
+    tft.setCursor(248, 245);
+    tft.print("Recalibrate");
+}
+
+void drawUnlocked(){
+    // Draw switch in unlocked position
+    tft.fillRect(370,65,50,41,DARKGRAY);
+    tft.fillCircle(370,85,20,DARKGRAY);
+    tft.fillCircle(420,85,20,DARKGRAY);
+    tft.fillCircle(370,85,16,GRAY);
+}
+
+void drawLocked(){
+    // Draw switch in locked position
+    tft.fillRect(370,65,50,41,DARKGRAY);
+    tft.fillCircle(370,85,20,DARKGRAY);
+    tft.fillCircle(420,85,20,DARKGRAY);
+    tft.fillCircle(420,85,16,GRAY);
+}
+
+void drawMetric(){
+    // Draw switch in metric position
+    tft.fillRect(370,150,50,41,DARKGRAY);
+    tft.fillCircle(370,170,20,DARKGRAY);
+    tft.fillCircle(420,170,20,DARKGRAY);
+    tft.fillCircle(370,170,16,GRAY);
+}
+
+void drawImperial(){
+    // Draw switch in imperial position
+    tft.fillRect(370,150,50,41,DARKGRAY);
+    tft.fillCircle(370,170,20,DARKGRAY);
+    tft.fillCircle(420,170,20,DARKGRAY);
+    tft.fillCircle(420,170,16,GRAY);
+}
+
+void recalibrate(){
+  //Add code to recalibrate motor
+}
