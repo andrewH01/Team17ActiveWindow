@@ -20,6 +20,7 @@ double temp;
 void setup() {
   while (!Serial);
   Serial.begin(9600);
+  
   chipC.reset();
   chipC.setBitrate(CAN_500KBPS);
   chipC.setNormalMode();  
