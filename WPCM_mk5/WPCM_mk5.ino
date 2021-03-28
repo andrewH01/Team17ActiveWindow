@@ -563,7 +563,7 @@ void drawSchedule(){
 
     // Draw Home button
     tft.fillRoundRect(15,15,130,50,12,GRAY);
-    tft.setTextSize(3);22
+    tft.setTextSize(3);
     tft.setTextColor(BLACK);
     tft.setCursor(45, 30);
     tft.print("Home");
@@ -607,7 +607,7 @@ char percent_buff[60];
 int desired = SLIDE_MINX, actual = SLIDE_MINX;
 
 void loopManual(int x, int y){
-    
+  
     if (x > SLIDE_MINX && x < SLIDE_MAXX)
       {
         if(x < SLIDE_MINX + THRESH){ x = SLIDE_MINX; }    // Snap to minimum if within threshold
