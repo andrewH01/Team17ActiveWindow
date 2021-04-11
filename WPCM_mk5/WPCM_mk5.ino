@@ -35,6 +35,7 @@ TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 #define BLACK       0x0000
 #define DARKGRAY    tft.color565(51, 51, 51)
 #define GRAY        tft.color565(128, 140, 145)
+#define LIGHTGRAY   tft.color565(175, 175, 175)
 #define LIGHTCYAN   tft.color565(233, 237, 247) 
 #define WHITE       0xFFFF
 
@@ -43,9 +44,10 @@ TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 
 /* Page value to currently display
  *  page = 0     :     Home
- *  page = 1     :     Schedule (WIP)
+ *  page = 1     :     Active
  *  page = 2     :     Manual
  *  page = 3     :     Settings (WIP)
+ *  page = 4     :     Schedule
  */
 int next_page = 0;
 int prev_page = next_page;
@@ -198,8 +200,16 @@ Serial.println(auto_position);
 
 
 
-if(next_page == 2){
+    if(next_page == 2){
       adjustSlider();
+    }
+
+    if(next_page == 0){
+
+      // Update temperature to whatever you want,                                                                   LOOK HERE
+      // possibly every minute or 30 seconds?
+      
+      drawTemperature();
     }
     
     // Retrieve a point  
@@ -222,9 +232,10 @@ if(next_page == 2){
 
     switch(next_page){
         case 0: loopHome(p.y,p.x);       break;
-        case 1: loopSchedule(p.y,p.x);   break; 
+        case 1: loopActive(p.y,p.x);   break; 
         case 2: loopManual(p.y,p.x);     break;
         case 3: loopSettings(p.y,p.x);   break;
+        case 4: loopSchedule(p.y,p.x);     break;
         default: Serial.println("Error with page value.");
     }
 
@@ -232,9 +243,10 @@ if(next_page == 2){
       prev_page = next_page;
       switch(next_page){
         case 0: drawHome();       break;
-        case 1: drawSchedule();   break; 
+        case 1: drawActive();     break; 
         case 2: drawManual();     break;
         case 3: drawSettings();   break;
+        case 4: drawSchedule();   break;
         default: Serial.println("Error with page value.");
       }
     }
@@ -411,7 +423,7 @@ void ReceiveMessageC(MCP2515 Device, struct can_frame Msg,int address){
 // HOME FUNCTIONS
 //
 
-#define BUTTON_WIDTH 175     // Y height of button
+#define BUTTON_WIDTH 150     // Y height of button
 #define BUTTON_HEIGHT 60     // X height of button
 
 int temperature = 54;                 // The temperature in Fahrenheit
@@ -419,10 +431,11 @@ char tempbuff[20];                    // Temperature string buffer
 char weather[20] = "Partly Cloudy";   // Weather text to display on screen (cloudy, sunny, raining)
 
 void loopHome(int x, int y){
+  
     // If touch is within button press threshold
     if (y > 375 && y < 450){
       
-      // SCHEDULE PRESSED
+      // ACTIVE PRESSED
       if (x > 18 && x < 178) {       //Hard-coded location of slider touch values
           Mode = 1;
           next_page = 1;
@@ -510,8 +523,9 @@ void drawWeather(){
 }
 
 void drawButtons(){
-    // Create black slider box outlines
+    // Create home screen buttons
     tft.fillRoundRect(20,240,BUTTON_WIDTH,BUTTON_HEIGHT,8,GRAY);
+    tft.fillRoundRect(152,240,BUTTON_WIDTH,BUTTON_HEIGHT,8,GRAY);
     tft.fillRoundRect(285,240,BUTTON_WIDTH,BUTTON_HEIGHT,8,GRAY);
 
     //Write text to buttons
@@ -545,20 +559,20 @@ void drawControl(){
 
 
 //
-// SCHEDULE MODE FUNCTIONS
+// ACTIVE MODE FUNCTIONS
 //
 
-void loopSchedule(int x, int y){
+void loopActive(int x, int y){
     if(x > 13 && x < 127 && y > 45 && y < 98){
       next_page = 0;
     }
 
     if(x > 188 && x < 355 && y > 288 && y < 355){
-      scheduleButton();
+      ActiveButton();
     }
 }
 
-void drawSchedule(){
+void drawActive(){
     tft.fillScreen(DARKGRAY);
 
     // Draw Home button
@@ -576,7 +590,7 @@ void drawSchedule(){
     tft.print("Button");
 }
 
-void scheduleButton(){
+void ActiveButton(){
 
 Mode = 1;
 
@@ -823,4 +837,279 @@ void drawImperial(){
 void recalibrate(){
 Mode = 3;
 Desired = 1;
+}
+
+//
+//  SCHEDULE FUNCTIONS
+//
+
+int schedRadioButton = 0;   // 0 = Open, 1 = Close, 2 = Delete
+boolean morningEvent = false;
+boolean afternoonEvent = false;
+boolean eveningEvent = false;
+boolean openInMorning = false;
+boolean openInAfternoon = false;
+boolean openInEvening = false;
+
+void drawSchedule(){
+   
+   // Make the screen blank, orient from portait to landscape mode
+   tft.fillScreen(DARKGRAY);
+  
+   // Draw Home button
+   tft.fillRoundRect(15,15,130,50,12,GRAY);
+   tft.setTextSize(3);
+   tft.setTextColor(BLACK);
+   tft.setCursor(45, 30);
+   tft.print("Home");
+
+   // Time printed to screen
+   tft.setTextSize(3);
+   tft.setTextColor(WHITE);
+   tft.setCursor(200, 22);
+   //sprintf(tempbuff, "%d F", temperature);
+   tft.print("12:27 PM");
+
+   // Fast forward button
+   tft.fillRoundRect(365,20,85,45,12,GRAY);
+   tft.fillTriangle(385, 27, 385, 57, 405, 42, DARKGRAY);
+   tft.fillTriangle(405, 27, 405, 57, 425, 42, DARKGRAY);
+   tft.fillRect(425, 27, 5, 30, DARKGRAY);
+
+   // Draw Morning, Afternoon, and Night buttons
+   tft.fillRoundRect(200,85,170,60,12,GRAY);
+   tft.fillRoundRect(200,165,170,60,12,GRAY);
+   tft.fillRoundRect(200,245,170,60,12,GRAY);
+   tft.setTextColor(BLACK);
+   tft.setCursor(222, 105);
+   tft.print("Morning");
+   tft.setCursor(206, 185);
+   tft.print("Afternoon");
+   tft.setCursor(222, 265);
+   tft.print("Evening");
+
+   // Draw Open and Close radio buttons
+   tft.fillRoundRect(20,100,150,190,12,GRAY);
+   tft.fillRoundRect(35,110,120,50,12,LIGHTGRAY);
+   tft.fillRoundRect(35,170,120,50,12,LIGHTGRAY);
+   tft.fillRoundRect(35,230,120,50,12,LIGHTGRAY);
+   tft.setCursor(60, 125);
+   tft.print("Open");
+   tft.setCursor(52, 185);
+   tft.print("Close");
+   tft.setCursor(43, 245);
+   tft.print("Delete");
+   
+   if(schedRadioButton == 0){
+     selectOpen();
+   }
+   else if(schedRadioButton == 1){
+     selectClose();
+   }
+   else{
+     selectDelete();
+   }
+}
+
+void loopSchedule(int x, int y){
+
+   // If Home button is pressed
+   if(x > 13 && x < 127 && y > 45 && y < 98){
+     next_page = 0;
+   }
+
+   // If Open/Close is pressed
+   else if(x > 30 && x < 130){
+     // For Open
+     if(y > 167 && y < 232){
+        if(schedRadioButton != 0){
+          selectOpen();
+        }
+     }
+     // For Close
+     else if(y > 268 && y < 330){
+        if(schedRadioButton != 1){
+          selectClose();
+        }
+     }
+     // For Delete
+     else if(y > 363 && y < 424){
+        if(schedRadioButton != 2){
+          selectDelete();
+        }
+     }
+   }
+
+   else if(x > 182 && x < 340){
+     
+     // For Morning
+     if(y > 133 && y < 220){
+        scheduleMorning();
+     }
+     
+     // For Afternoon
+     if(y > 265 && y < 345){
+        scheduleAfternoon();
+     }
+     
+     // For Evening
+     if(y > 390 && y < 450){
+        scheduleEvening();
+     }
+   }
+
+   if(x > 343 && x < 418 && y < 100 && y > 40){
+        fastForward();
+   }
+
+   // Need to an if statement that checks every minute if the current                                       LOOK HERE
+   // time is equal to an event time (Morning, Afternoon, Evening)
+  
+}
+
+void selectOpen(){
+
+   // Select Open
+   tft.drawRoundRect(35,110,120,50,12,DARKGRAY);
+   tft.drawRoundRect(36,111,118,48,12,DARKGRAY);
+
+   // Deselect Close
+   tft.drawRoundRect(35,170,120,50,12,LIGHTGRAY);
+   tft.drawRoundRect(36,171,118,48,12,LIGHTGRAY);
+
+   // Deselect Delete
+   tft.drawRoundRect(35,230,120,50,12,LIGHTGRAY);
+   tft.drawRoundRect(36,231,118,48,12,LIGHTGRAY);
+
+   schedRadioButton = 0;
+}
+
+void selectClose(){
+
+   // Deselect Open
+   tft.drawRoundRect(35,110,120,50,12,LIGHTGRAY);
+   tft.drawRoundRect(36,111,118,48,12,LIGHTGRAY);
+
+   // Select Close
+   tft.drawRoundRect(35,170,120,50,12,DARKGRAY);
+   tft.drawRoundRect(36,171,118,48,12,DARKGRAY);
+
+   // Deselect Delete
+   tft.drawRoundRect(35,230,120,50,12,LIGHTGRAY);
+   tft.drawRoundRect(36,231,118,48,12,LIGHTGRAY);
+
+   schedRadioButton = 1;
+}
+
+void selectDelete(){
+
+   // Deselect Open
+   tft.drawRoundRect(35,110,120,50,12,LIGHTGRAY);
+   tft.drawRoundRect(36,111,118,48,12,LIGHTGRAY);
+
+   // Deselect Close
+   tft.drawRoundRect(35,170,120,50,12,LIGHTGRAY);
+   tft.drawRoundRect(36,171,118,48,12,LIGHTGRAY);
+
+   // Select Delete
+   tft.drawRoundRect(35,230,120,50,12,DARKGRAY);
+   tft.drawRoundRect(36,231,118,48,12,DARKGRAY);
+
+   schedRadioButton = 2;
+}
+
+void scheduleMorning(){
+   if(schedRadioButton == 2){
+       tft.fillRect(390,105, 70, 30, DARKGRAY);
+       morningEvent = false;
+       return;
+   }
+  
+   // Schedule Open or Close in the Morning and draw event to screen
+   tft.setTextColor(WHITE);
+   tft.setTextSize(2);
+   tft.setCursor(390, 105);
+   
+   if(schedRadioButton == 0){
+      if(!openInMorning){
+         tft.fillRect(390,105, 70, 30, DARKGRAY);
+      }
+      openInMorning = true;
+      tft.print("OPEN");
+   }
+   else if(schedRadioButton == 1){
+      if(openInMorning){
+         tft.fillRect(390,105, 70, 30, DARKGRAY);
+      }
+      openInMorning = false;
+      tft.print("CLOSE");
+   }
+
+   morningEvent = true;
+}
+
+void scheduleAfternoon(){
+   if(schedRadioButton == 2){
+      tft.fillRect(390,185, 70, 30, DARKGRAY);
+      afternoonEvent = false;
+      return;
+   }
+  
+   // Schedule Open or Close in the Afternoon and draw event to screen
+   tft.setTextColor(WHITE);
+   tft.setTextSize(2);
+   tft.setCursor(390, 185);
+   
+   if(schedRadioButton == 0){
+      if(!openInAfternoon){
+         tft.fillRect(390,185, 70, 30, DARKGRAY);
+      }
+      openInAfternoon = true;
+      tft.print("OPEN");
+   }
+   else if(schedRadioButton == 1){
+      if(openInAfternoon){
+         tft.fillRect(390,185, 70, 30, DARKGRAY);
+      }
+      openInAfternoon = false;
+      tft.print("CLOSE");
+   }
+   
+   afternoonEvent = true;
+}
+
+void scheduleEvening(){
+   if(schedRadioButton == 2){
+       tft.fillRect(390,265, 70, 30, DARKGRAY);
+       eveningEvent = false;
+       return;
+   }
+  
+   // Schedule Open or Close in the Evening and draw event to screen
+   tft.setTextColor(WHITE);
+   tft.setTextSize(2);
+   tft.setCursor(390, 265);
+
+   if(schedRadioButton == 0){
+      if(!openInEvening){
+         tft.fillRect(390,265, 70, 30, DARKGRAY);
+      }
+      openInEvening = true;
+      tft.print("OPEN");
+   }
+   else if(schedRadioButton == 1){
+      if(openInEvening){
+         tft.fillRect(390,265, 70, 30, DARKGRAY);
+      }
+      openInEvening = false;
+      tft.print("CLOSE");
+   }
+
+   eveningEvent = true;
+}
+
+void fastForward(){
+
+   // Code to set current time to the next event time (Morning, Afternoon, Night)                                     LOOK HERE
+   
 }
